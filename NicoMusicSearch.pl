@@ -76,7 +76,11 @@ my $conn = tcp_connect($server->{addr}, $server->{port}, sub {
     $handle->push_read(line => "\0", \&reader);
 });
 
-my $reset_timer;
+my $timer; $timer = AnyEvent->timer(
+    after => 1 * 60 * 60 * 3, interval => 1 * 60 * 60 * 3, cb => sub {
+        @TWEETED = ();
+    }
+);
 
 $conn_cv->recv;
 
@@ -98,8 +102,12 @@ sub reader {
 
                     if (is_over400($body)) {
                         my $status = construct_status($body, XMLin($xml_body), $word, \%stream);
-                        $twitty->request(api => 'statuses/update', method => 'POST', params => {
-                            status => $status }, sub { say encode_utf8 $_[1]->{text}});
+                        $twitty->request(api => 'statuses/update', method => 'POST',
+                            params => {status => $status}, sub {
+                                say encode_utf8 $_[1]->{text};
+                                push @TWEETED, $stream{user};
+                            }
+                        );
                     }
                 };
             }
@@ -115,16 +123,16 @@ sub is_matched {
     my $formed = uc NFKC decode_utf8 $body;
     $formed =~ tr/ぁ-ん/ァ-ン/;
 
+    for (@TWEETED) {
+        return undef if $user eq $_;
+    }
+
     my @matched_words;
     for (my $i = 0; $i < scalar @normalized_words; $i++) {
         push @matched_words, $words[$i] if $formed =~ $normalized_words[$i];
     }
 
     return undef unless (scalar @matched_words);
-
-    for (@TWEETED) {
-        return undef if $user eq $_;
-    }
 
     $matched_words[0] =~ s/\\//g;
     return $matched_words[0];
