@@ -1,15 +1,7 @@
-#!/usr/bin/env perl
-
-use strict;
-use warnings;
-use utf8;
-use 5.012;
-
+use common::sense;
 use Encode;
 use Data::Dumper;
-
 use AnyEvent;
-use AnyEvent::DBI;
 use AnyEvent::HTTP;
 use AnyEvent::Socket;
 use AnyEvent::Handle;
